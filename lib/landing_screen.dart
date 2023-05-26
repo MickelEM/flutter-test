@@ -17,59 +17,41 @@ class _LandingScreenState extends State<LandingScreen> {
   bool isLoading = false;
   bool isAllDataLoaded = false;
   int currentPage = 1;
-  int itemsPerPage = 10;
 
   @override
   void initState() {
     super.initState();
-    fetchNFTs();
+    loadData();
   }
 
-  Future<void> fetchNFTs() async {
-    if (isLoading || isAllDataLoaded) return;
+  void loadData() async {
+    final newNfts = await fetchNFTs();
+    setState(() {
+      data.addAll(newNfts);
+      currentPage++;
+    });
+  }
 
+  Future<List<NFT>> fetchNFTs() async {
     setState(() {
       isLoading = true;
     });
 
-    try {
-      final url =
-          'https://api.coingecko.com/api/v3/nfts/list?page=$currentPage&per_page=$itemsPerPage';
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        // print(response.body);
-        final data = jsonDecode(response.body);
-        // print(data);
-        List<NFT> fetchedNFTs = [];
-        for (var item in data) {
-          final nft = NFT(
-            id: item['id'],
-            name: item['name'],
-            symbol: item['symbol'],
-          );
-          fetchedNFTs.add(nft);
-        }
-
-        print(fetchedNFTs);
-        setState(() {
-          data.addAll(fetchedNFTs);
-          currentPage++;
-          isLoading = false;
-          if (fetchedNFTs.length < itemsPerPage) {
-            isAllDataLoaded = true;
-          }
-        });
-      } else {
-        print('Failed to fetch NFTs: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error: $e');
+    final url =
+        'https://api.coingecko.com/api/v3/nfts/list?page=$currentPage&per_page=10';
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      // print(response.body);
+      final json = jsonDecode(response.body) as List;
+      // print(data);
+      return json.map((record) => NFT.fromJson(record)).toList();
+    } else {
+      throw Exception('Failed to load NFTs');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    print(data);
     return MaterialApp(
       title: 'NFT List',
       home: Scaffold(
